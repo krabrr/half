@@ -9,7 +9,7 @@
 </template>
 
 <script>
-import json from './assets/geo_json.json'
+import json from './assets/geo_shop_50.json'
 import mapboxgl from 'mapbox-gl'
 
 export default {
@@ -75,11 +75,12 @@ export default {
             new mapboxgl.Popup()
               .setLngLat(feature.geometry.coordinates)
               .setHTML('<div id=\'popup\' class=\'popup\' style=\'z-index: 10;\'>' +
+              `<img src='https://search-merchant.xn--42caj4e6bk1f5b1j.com/img/${feature.properties.image}/small' width='100%'>` +
               '<table class="table" style="margin-top: 2rem; padding: 1rem;">' +
               '<tbody>' +
-              '<tr><td>ชื่อร้าน:</td><td>' + feature.properties.name + '</td></tr>' +
-              '<tr><td>ประเภท:</td><td>' + feature.properties.category + '</td></tr>' +
-              '<tr><td>ประเภทย่อย:</td><td>' + feature.properties.sub_category + '</td></tr>' +
+              `<tr><td>ชื่อร้าน:</td><td><a href='https://search-merchant.xn--42caj4e6bk1f5b1j.com/shop/${feature.properties.id}' target='_blank'>${feature.properties.name}</a></td></tr>` +
+              `<tr><td>ประเภท:</td><td>${feature.properties.category}</td></tr>` +
+              `<tr><td>ประเภทย่อย:</td><td>${feature.properties.sub_category}</td></tr>` +
               '</tbody></table></div>')
               .addTo(this.map)
           })
