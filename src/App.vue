@@ -1,5 +1,8 @@
 <template>
   <div id='map'></div>
+  <div class="filter-ctrl">
+    <input id="filter-input" type="text" name="filter" placeholder="ค้นหาโดยชื่อ" v-model="keyword" @keyup="search"/>
+  </div>
   <div id="state-legend" class="legend">
     <h4>Category</h4>
     <div><span style="background-color: #478ba2"></span>ร้านอาหาร</div>
@@ -9,19 +12,72 @@
 </template>
 
 <script>
-import json from './assets/geo_shop_50.json'
+import shop20 from './assets/geo_shop_20.json'
+import shop50 from './assets/geo_shop_50.json'
 import mapboxgl from 'mapbox-gl'
 
 export default {
   name: 'App',
   data () {
     return {
-      geoJson: json,
+      shops: [
+        { id: '20', name: 'ชลบุรี', data: shop20 }, 
+        { id: '50', name: 'เชียงใหม่', data: shop50 }
+      ],
+      keyword: '',
+      features: [],
+      isMapReady: false,
       mapStyle: 'mapbox://styles/mapbox/streets-v10',
       accessToken: 'pk.eyJ1Ijoia3JhYnJyIiwiYSI6ImNpb3p3b3k3NzAyZjJ1MG00NXQyN3oxMG4ifQ.6Joj8DEUGjj0hrlgdsojqQ'
     }
   },
   methods: {
+    search () {
+      if (!this.isMapReady) {
+        return
+      }
+      console.log(this.keyword)
+      const filtered = this.features.filter((feature) => {
+        const name = feature.properties.name
+        let nameEN = ''
+        if (feature.properties.name_en) {
+          nameEN = feature.properties.name_en.trim().toLowerCase()
+        }
+        return name.indexOf(this.keyword) > -1 || nameEN.indexOf(this.keyword) > -1
+      })
+      for (let i = 0; i < this.shops.length; i++) {
+        const shop = this.shops[i]
+        const id = shop.id
+        if (filtered.length) {
+          this.map.setFilter(id, [
+            'match',
+            ['get', 'name'],
+            filtered.map(function (feature) {
+              return feature.properties.name;
+            }),
+            true,
+            false
+          ]);
+        } else {
+          this.map.setFilter(id, ['==', ['get', 'name'], '']);
+        }
+      }
+    },
+    getUniqueFeatures(features, comparatorProperty) {
+      let existingKeys = {};
+      // Because features come from tiled vector data, feature geometries may be split
+      // or duplicated across tile boundaries and, as a result, features may appear
+      // multiple times in query results.
+      const uniqueFeatures = features.filter((feature) => {
+        if (existingKeys[feature.properties[comparatorProperty]]) {
+          return false
+        } else {
+          existingKeys[feature.properties[comparatorProperty]] = true;
+          return true
+        }
+      })
+      return uniqueFeatures;
+    },
     createMap () {
         mapboxgl.accessToken = this.accessToken
         let center = [98.986013, 18.788926]
@@ -34,43 +90,47 @@ export default {
         })
         
         this.map.on('load', () => {
-          this.map.addSource('shops', {
-            'type': 'geojson',
-            'data': this.geoJson
-          })
-          this.map.addLayer({
-            'id': 'shops',
-            'type': 'circle',
-            'source': 'shops',
-            'paint': {
-              'circle-radius': {
-                'base': 6,
-                'stops': [[12, 6], [22, 180]]
-              },
-              'circle-color': [
-                'match',
-                ['get', 'category'],
-                'ร้านอาหาร', '#478ba2',
-                'ร้านอาหาร/เครื่องดื่ม', '#478ba2',
-                'ร้านค้าธงฟ้า', '#de5b6d',
-                'ซุปเปอร์มาร์เก็ต/ขายของใช้/ขายของชำ/มินิมาร์ท/ตลาดสด', '#de5b6d',
-                'ร้านค้าท้องถิ่น/ผลิตภัณฑ์ชุมชน/OTOP', '#de5b6d',
-                'ร้านค้าทั่วไป', '#de5b6d',
-                'แฟชั่น', '#de5b6d',
-                'กิจการ OTOP', '#de5b6d',
-                /* other */ '#b9dcdb'
-              ]
-            }
-          })
-          // this.map.scrollZoom.disable()
+          let layers = []
+          for (let i = 0; i < this.shops.length; i++) {
+            const shop = this.shops[i];
+            this.features = [ ...this.features, ...shop.data.features ]
+            this.map.addSource(shop.id, {
+              type: 'geojson',
+              data: shop.data
+            })
+            this.map.addLayer({
+              id: shop.id,
+              type: 'circle',
+              source: shop.id,
+              paint: {
+                'circle-radius': {
+                  'base': 6,
+                  'stops': [[12, 6], [22, 180]]
+                },
+                'circle-color': [
+                  'match',
+                  ['get', 'category'],
+                  'ร้านอาหาร', '#478ba2',
+                  'ร้านอาหาร/เครื่องดื่ม', '#478ba2',
+                  'ร้านค้าธงฟ้า', '#de5b6d',
+                  'ซุปเปอร์มาร์เก็ต/ขายของใช้/ขายของชำ/มินิมาร์ท/ตลาดสด', '#de5b6d',
+                  'ร้านค้าท้องถิ่น/ผลิตภัณฑ์ชุมชน/OTOP', '#de5b6d',
+                  'ร้านค้าทั่วไป', '#de5b6d',
+                  'แฟชั่น', '#de5b6d',
+                  'กิจการ OTOP', '#de5b6d',
+                  /* other */ '#b9dcdb'
+                ]
+              }
+            })
+            layers.push(shop.id)
+          }
+          this.features = this.getUniqueFeatures(this.features, 'name')
           this.map.addControl(new mapboxgl.NavigationControl())
           this.map.on('click', (e) => {
-            const features = this.map.queryRenderedFeatures(e.point, { layers: ['shops'] })
-            // if the features have no info, return nothing
+            const features = this.map.queryRenderedFeatures(e.point, { layers })
             if (!features.length) {
               return
             }
-
             const feature = features[0]
             new mapboxgl.Popup()
               .setLngLat(feature.geometry.coordinates)
@@ -85,10 +145,11 @@ export default {
               .addTo(this.map)
           })
           this.map.on('mousemove', (e) => {
-            let features = this.map.queryRenderedFeatures(e.point, { layers: ['shops'] })
+            const features = this.map.queryRenderedFeatures(e.point, { layers })
             this.map.getCanvas().style.cursor = features.length ? 'pointer' : ''
           })
           this.map.resize()
+          this.isMapReady = true
         })
       }
   },
@@ -132,5 +193,25 @@ export default {
   height: 10px;
   margin-right: 5px;
   width: 10px;
+}
+
+.filter-ctrl {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1;
+}
+  
+.filter-ctrl input[type='text'] {
+  font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+  width: 100%;
+  border: 0;
+  background-color: #fff;
+  margin: 0;
+  color: rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  width: 180px;
 }
 </style>
