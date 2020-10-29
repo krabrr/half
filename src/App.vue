@@ -53,18 +53,18 @@ export default {
             'match',
             ['get', 'name'],
             filtered.map(function (feature) {
-              return feature.properties.name;
+              return feature.properties.name
             }),
             true,
             false
-          ]);
+          ])
         } else {
-          this.map.setFilter(id, ['==', ['get', 'name'], '']);
+          this.map.setFilter(id, ['==', ['get', 'name'], ''])
         }
       }
     },
     getUniqueFeatures(features, comparatorProperty) {
-      let existingKeys = {};
+      let existingKeys = {}
       // Because features come from tiled vector data, feature geometries may be split
       // or duplicated across tile boundaries and, as a result, features may appear
       // multiple times in query results.
@@ -72,11 +72,11 @@ export default {
         if (existingKeys[feature.properties[comparatorProperty]]) {
           return false
         } else {
-          existingKeys[feature.properties[comparatorProperty]] = true;
+          existingKeys[feature.properties[comparatorProperty]] = true
           return true
         }
       })
-      return uniqueFeatures;
+      return uniqueFeatures
     },
     createMap () {
         mapboxgl.accessToken = this.accessToken
@@ -92,7 +92,7 @@ export default {
         this.map.on('load', () => {
           let layers = []
           for (let i = 0; i < this.shops.length; i++) {
-            const shop = this.shops[i];
+            const shop = this.shops[i]
             this.features = [ ...this.features, ...shop.data.features ]
             this.map.addSource(shop.id, {
               type: 'geojson',
