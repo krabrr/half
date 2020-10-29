@@ -3,6 +3,12 @@
   <div class="filter-ctrl">
     <input id="filter-input" type="text" name="filter" placeholder="ค้นหาโดยชื่อ" v-model="keyword" @keyup="search"/>
   </div>
+  <div class="province-ctrl">
+    <select class="form-control" v-model="selectedProvinceId" @change="filterProvince">
+      <option value="">ทุกจังหวัด</option>
+      <option v-for="shop in shops" :value="shop.id" :key="shop.id">{{ shop.name }}</option>
+    </select>
+  </div>
   <div id="state-legend" class="legend">
     <h4>Category</h4>
     <div><span style="background-color: #478ba2"></span>ร้านอาหาร</div>
@@ -14,6 +20,7 @@
 <script>
 import shop20 from './assets/geo_shop_20.json'
 import shop50 from './assets/geo_shop_50.json'
+import shop83 from './assets/geo_shop_83.json'
 import mapboxgl from 'mapbox-gl'
 
 export default {
@@ -22,9 +29,11 @@ export default {
     return {
       shops: [
         { id: '20', name: 'ชลบุรี', data: shop20 }, 
-        { id: '50', name: 'เชียงใหม่', data: shop50 }
+        { id: '50', name: 'เชียงใหม่', data: shop50 },
+        { id: '83', name: 'ภูเก็ต', data: shop83 }
       ],
       keyword: '',
+      selectedProvinceId: '',
       features: [],
       isMapReady: false,
       mapStyle: 'mapbox://styles/mapbox/streets-v10',
@@ -36,7 +45,6 @@ export default {
       if (!this.isMapReady) {
         return
       }
-      console.log(this.keyword)
       const filtered = this.features.filter((feature) => {
         const name = feature.properties.name
         let nameEN = ''
@@ -63,6 +71,16 @@ export default {
         }
       }
     },
+    filterProvince () {
+      if (!this.isMapReady) {
+        return
+      }
+      for (let i = 0; i < this.shops.length; i++) {
+        const shop = this.shops[i]
+        const id = shop.id
+        this.map.setLayoutProperty(id, 'visibility', !this.selectedProvinceId  || id == this.selectedProvinceId ? 'visible' : 'none')
+      }
+    },
     getUniqueFeatures(features, comparatorProperty) {
       let existingKeys = {}
       // Because features come from tiled vector data, feature geometries may be split
@@ -80,13 +98,13 @@ export default {
     },
     createMap () {
         mapboxgl.accessToken = this.accessToken
-        let center = [98.986013, 18.788926]
+        let center = [100.763007, 13.636028]
         this.map = new mapboxgl.Map({
           container: 'map',
           style: this.mapStyle,
           minzoom: 1.3,
           center,
-          zoom: 10
+          zoom: 5
         })
         
         this.map.on('load', () => {
@@ -213,5 +231,19 @@ export default {
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
   border-radius: 3px;
   width: 180px;
+}
+
+.province-ctrl {
+  position: absolute;
+  top: 60px;
+  left: 10px;
+  z-index: 1;
+  width: 180px;
+  font-size: 85%;
+}
+
+.province-ctrl select {
+  font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+  height: 40px;
 }
 </style>
